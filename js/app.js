@@ -172,7 +172,7 @@
         results.appendChild(el('div', 'hint', 'Không tìm thấy kết quả cho “' + esc(trimmed) + '”.'));
         return;
       }
-      found.forEach((s) => results.appendChild(Views.songRow(s, { queue: found })));
+      found.forEach((s) => results.appendChild(Views.songRow(s, { queue: found, swipeDelete: true })));
     }
 
     /* lift field above mobile keyboard */
@@ -459,6 +459,14 @@
     Views.refreshSub();
   }
 
+  /* delete a song from the whole library (used by swipe-to-delete) */
+  async function deleteSong(song) {
+    await Library.removeSong(song.id);
+    Player.removeFromQueue(song.id);
+    Util.toast('Đã xoá “' + song.title + '”');
+    refreshAll();
+  }
+
   /* ============ play + history ============ */
   function playFromGesture(list, index, opts) {
     Player.playQueue(list, index, opts || {});
@@ -537,6 +545,7 @@
     openPlaylistSheet,
     openLibrarySheet,
     createPlaylistPrompt,
+    deleteSong,
     refreshAll,
   };
 

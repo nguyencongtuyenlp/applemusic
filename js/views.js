@@ -14,6 +14,7 @@
   function songRow(song, opts) {
     opts = opts || {};
     const row = el('div', 'row');
+    let wrap = null; // swipe wrapper, when swipeDelete is on
     let favGutter = '';
     if (song.favorite && opts.favGutter !== false) favGutter = '<span class="fav-gutter">★</span>';
     const isCurrent = Player.current() && Player.current().id === song.id;
@@ -30,11 +31,102 @@
       App.openSongSheet(song);
     });
     row.addEventListener('click', () => {
+      if (row._swiped) return; // ignore the click that ends a swipe
+      if (wrap && wrap.classList.contains('open')) {
+        closeSwipe(wrap);
+        return;
+      }
       const list = opts.queue || [song];
       const idx = opts.queue ? opts.queue.indexOf(song) : 0;
       App.playFromGesture(list, idx);
     });
-    return row;
+
+    if (!opts.swipeDelete) return row;
+
+    // ----- swipe-from-right-to-left to delete (iOS style) -----
+    wrap = el('div', 'swipe-row');
+    const action = el('div', 'swipe-action');
+    action.innerHTML =
+      '<button class="swipe-del" aria-label="Xoá">' + Icons.trash + '<span>Xoá</span></button>';
+    row.classList.add('swipe-content');
+    wrap.appendChild(action);
+    wrap.appendChild(row);
+    action.querySelector('.swipe-del').addEventListener('click', (e) => {
+      e.stopPropagation();
+      confirmSwipeDelete(song, wrap, opts);
+    });
+    wireSwipeDelete(wrap, row, song, opts);
+    return wrap;
+  }
+
+  /* ---------- swipe-to-delete machinery ---------- */
+  const SWIPE_REVEAL = 84;
+  let openSwipe = null;
+  function closeSwipe(wrap) {
+    if (!wrap) return;
+    wrap.classList.remove('open');
+    const c = wrap.querySelector('.swipe-content');
+    if (c) {
+      c.style.transition = '';
+      c.style.transform = '';
+    }
+    if (openSwipe === wrap) openSwipe = null;
+  }
+  function confirmSwipeDelete(song, wrap, opts) {
+    openSwipe = null;
+    wrap.style.height = wrap.offsetHeight + 'px';
+    void wrap.offsetWidth;
+    wrap.classList.add('removing');
+    wrap.style.height = '0px';
+    wrap.style.opacity = '0';
+    setTimeout(() => {
+      if (opts.onDelete) opts.onDelete(song);
+      else App.deleteSong(song);
+    }, 240);
+  }
+  function wireSwipeDelete(wrap, content, song, opts) {
+    let sx = 0, sy = 0, dx = 0, horiz = null, active = false;
+    content.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      sx = e.clientX; sy = e.clientY; dx = 0; horiz = null; active = true;
+      content._swiped = false;
+    });
+    content.addEventListener('pointermove', (e) => {
+      if (!active) return;
+      const mdx = e.clientX - sx, mdy = e.clientY - sy;
+      if (horiz === null) {
+        if (Math.abs(mdx) > 8 || Math.abs(mdy) > 8) horiz = Math.abs(mdx) > Math.abs(mdy);
+        else return;
+      }
+      if (!horiz) { active = false; return; } // vertical → let the list scroll
+      e.preventDefault();
+      try { content.setPointerCapture(e.pointerId); } catch (er) {}
+      if (openSwipe && openSwipe !== wrap) closeSwipe(openSwipe);
+      const base = wrap.classList.contains('open') ? -SWIPE_REVEAL : 0;
+      dx = Math.min(0, Math.max(-window.innerWidth, base + mdx));
+      content.style.transition = 'none';
+      content.style.transform = 'translateX(' + dx + 'px)';
+      content._swiped = true;
+    });
+    const end = () => {
+      if (!active) return;
+      active = false;
+      content.style.transition = '';
+      if (!horiz) return;
+      const w = wrap.offsetWidth || 320;
+      if (dx < -w * 0.6) {
+        confirmSwipeDelete(song, wrap, opts); // long swipe = delete
+      } else if (dx < -SWIPE_REVEAL * 0.5) {
+        wrap.classList.add('open'); // reveal the Xoá button
+        content.style.transform = 'translateX(' + -SWIPE_REVEAL + 'px)';
+        openSwipe = wrap;
+      } else {
+        closeSwipe(wrap);
+      }
+      setTimeout(() => { content._swiped = false; }, 60);
+    };
+    content.addEventListener('pointerup', end);
+    content.addEventListener('pointercancel', end);
   }
 
   function tile(song, queue) {
@@ -539,7 +631,7 @@
           const lh = el('div', 'letter-head', esc(L));
           lh.dataset.letter = L;
           view.appendChild(lh);
-          groups.get(L).forEach((s) => view.appendChild(songRow(s, { queue: songs })));
+          groups.get(L).forEach((s) => view.appendChild(songRow(s, { queue: songs, swipeDelete: true })));
         });
         /* A-Z rail */
         const rail = el('div', 'az-rail');
@@ -565,7 +657,7 @@
         actionPills(view, () => files);
         const wrap = el('div');
         wrap.style.marginTop = '14px';
-        files.forEach((s) => wrap.appendChild(songRow(s, { queue: files })));
+        files.forEach((s) => wrap.appendChild(songRow(s, { queue: files, swipeDelete: true })));
         view.appendChild(wrap);
       }
     }
@@ -589,7 +681,21 @@
             isFav ? 'Bấm ★ Yêu thích trong tùy chọn bài hát.' : 'Thêm bài hát vào playlist từ menu ••• của bài hát.'
           )
         );
-      } else ss.forEach((s) => list.appendChild(songRow(s, { queue: ss })));
+      } else {
+        // in a playlist, swipe removes from the playlist (or unfavorites),
+        // not from the whole library
+        const onDelete = async (song) => {
+          if (isFav) {
+            await Library.toggleFavorite(song.id);
+            Util.toast('Đã bỏ yêu thích');
+          } else {
+            await Library.removeFromPlaylist(pl.id, song.id);
+            Util.toast('Đã xoá khỏi playlist');
+          }
+          App.refreshAll();
+        };
+        ss.forEach((s) => list.appendChild(songRow(s, { queue: ss, swipeDelete: true, onDelete })));
+      }
       view.appendChild(list);
     }
 
@@ -600,7 +706,7 @@
       actionPills(view, () => a.songs);
       const list = el('div');
       list.style.marginTop = '14px';
-      a.songs.forEach((s) => list.appendChild(songRow(s, { queue: a.songs })));
+      a.songs.forEach((s) => list.appendChild(songRow(s, { queue: a.songs, swipeDelete: true })));
       view.appendChild(list);
     }
 
@@ -612,7 +718,7 @@
       actionPills(view, () => al.songs);
       const list = el('div');
       list.style.marginTop = '14px';
-      al.songs.forEach((s) => list.appendChild(songRow(s, { queue: al.songs })));
+      al.songs.forEach((s) => list.appendChild(songRow(s, { queue: al.songs, swipeDelete: true })));
       view.appendChild(list);
     }
 
