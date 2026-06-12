@@ -460,6 +460,30 @@
     head.querySelector('.avatar').addEventListener('click', () => App.openAddSheet());
     view.appendChild(head);
 
+    // "Ghim nhạc thường nghe của bạn" onboarding card (like real Apple Music),
+    // dismissable — stays hidden once closed
+    if (localStorage.getItem('pin-card-dismissed') !== '1') {
+      const pin = el('div', 'pin-card');
+      pin.innerHTML =
+        '<button class="pin-x" aria-label="Đóng">' + Icons.close + '</button>' +
+        '<div class="pin-row"><span class="pin-icon">' + Icons.pin + '</span>' +
+        '<div class="pin-text">' +
+        '<div class="pin-title">Ghim nhạc thường nghe của bạn</div>' +
+        '<div class="pin-desc">Khi bạn ghim nhạc đã được thêm vào thư viện của mình, nội dung nhạc đó sẽ xuất hiện ở đây.</div>' +
+        '</div></div>';
+      pin.querySelector('.pin-x').addEventListener('click', () => {
+        localStorage.setItem('pin-card-dismissed', '1');
+        pin.style.height = pin.offsetHeight + 'px';
+        void pin.offsetWidth;
+        pin.classList.add('closing');
+        pin.style.height = '0px';
+        pin.style.opacity = '0';
+        pin.style.margin = '0 20px';
+        setTimeout(() => pin.remove(), 280);
+      });
+      view.appendChild(pin);
+    }
+
     const list = el('div');
     list.style.marginTop = '8px';
     LIB_CATS.forEach((c) => {

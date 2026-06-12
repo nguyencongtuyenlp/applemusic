@@ -489,6 +489,39 @@ input, textarea { font-family: inherit; }
   will-change: transform;
 }
 
+/* "Ghim nhạc thường nghe" onboarding card */
+.pin-card {
+  margin: 14px 20px 4px;
+  background: #1c1c1e;
+  border-radius: 14px;
+  padding: 18px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.pin-card.closing { transition: height 0.26s ease, opacity 0.26s ease, margin 0.26s ease; }
+.pin-row { display: flex; gap: 14px; align-items: flex-start; }
+.pin-icon { flex: none; color: #fff; margin-top: 2px; }
+.pin-icon svg { width: 26px; height: 26px; }
+.pin-text { flex: 1; min-width: 0; padding-right: 26px; }
+.pin-title { font-size: 17px; font-weight: 700; line-height: 1.25; }
+.pin-desc { font-size: 15px; color: var(--text-2); line-height: 1.4; margin-top: 8px; }
+.pin-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(235, 235, 245, 0.6);
+  transition: transform 0.2s var(--ease-spring);
+}
+.pin-x:active { transform: scale(0.85); }
+.pin-x svg { width: 12px; height: 12px; }
+
 /* library category rows */
 .lib-row {
   display: flex;
