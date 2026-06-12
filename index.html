@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
+    />
+    <title>Âm Nhạc</title>
+    <meta
+      name="description"
+      content="Trình phát nhạc phong cách iOS 26 Liquid Glass — phát nhạc từ YouTube hoặc file của bạn, chạy ngay trên trình duyệt."
+    />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Âm Nhạc" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body>
+    <!-- Liquid Glass SVG filters (Chromium refraction path; maps injected by glass.js) -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <filter id="lgf-tab" x="0" y="0" width="300" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feImage id="lgi-tab" x="0" y="0" width="300" height="64" result="map" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="60" xChannelSelector="R" yChannelSelector="G" result="dR" />
+          <feColorMatrix in="dR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="70" xChannelSelector="R" yChannelSelector="G" result="dG" />
+          <feColorMatrix in="dG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="80" xChannelSelector="R" yChannelSelector="G" result="dB" />
+          <feColorMatrix in="dB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feBlend in="r" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="b" mode="screen" result="refracted" />
+          <feGaussianBlur in="refracted" stdDeviation="0.5" />
+        </filter>
+        <filter id="lgf-mini" x="0" y="0" width="340" height="58" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feImage id="lgi-mini" x="0" y="0" width="340" height="58" result="map" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="55" xChannelSelector="R" yChannelSelector="G" result="dR" />
+          <feColorMatrix in="dR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="65" xChannelSelector="R" yChannelSelector="G" result="dG" />
+          <feColorMatrix in="dG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="75" xChannelSelector="R" yChannelSelector="G" result="dB" />
+          <feColorMatrix in="dB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feBlend in="r" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="b" mode="screen" result="refracted" />
+          <feGaussianBlur in="refracted" stdDeviation="0.5" />
+        </filter>
+        <filter id="lgf-search" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+          <feImage id="lgi-search" x="0" y="0" width="64" height="64" result="map" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="50" xChannelSelector="R" yChannelSelector="G" result="dR" />
+          <feColorMatrix in="dR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="58" xChannelSelector="R" yChannelSelector="G" result="dG" />
+          <feColorMatrix in="dG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g" />
+          <feDisplacementMap in="SourceGraphic" in2="map" scale="66" xChannelSelector="R" yChannelSelector="G" result="dB" />
+          <feColorMatrix in="dB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b" />
+          <feBlend in="r" in2="g" mode="screen" result="rg" />
+          <feBlend in="rg" in2="b" mode="screen" result="refracted" />
+          <feGaussianBlur in="refracted" stdDeviation="0.5" />
+        </filter>
+      </defs>
+    </svg>
+
+    <!-- hidden YouTube dock: rendered & in-viewport (required), UI sits on top.
+         NEVER moved in the DOM — a re-parented iframe reloads and stops. -->
+    <div id="yt-dock"><div id="yt-player"></div></div>
+
+    <div id="app">
+      <!-- root tab views -->
+      <section class="view" id="view-home"></section>
+      <section class="view" id="view-discover" hidden></section>
+      <section class="view" id="view-radio" hidden></section>
+      <section class="view" id="view-library" hidden></section>
+
+      <!-- pushed sub-screens -->
+      <section class="view" id="view-sub" hidden></section>
+
+      <!-- search overlay -->
+      <section id="view-search">
+        <div id="search-results"></div>
+        <div id="search-field-wrap">
+          <div id="search-field" class="liquid-glass">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.6 4.6" />
+            </svg>
+            <input id="search-input" type="search" placeholder="Tìm kiếm" autocomplete="off" />
+          </div>
+          <button id="search-cancel">Huỷ</button>
+        </div>
+      </section>
+
+      <!-- floating bottom chrome -->
+      <div id="bottom-chrome">
+        <div id="mini-player" class="liquid-glass lg-mini gone">
+          <img class="mp-art" id="mp-art" alt="" />
+          <div class="mp-texts">
+            <div class="mp-title" id="mp-title"></div>
+            <div class="mp-artist" id="mp-artist"></div>
+          </div>
+          <button class="mp-btn play" id="mp-toggle" aria-label="Phát / Dừng"></button>
+          <button class="mp-btn" id="mp-fwd" aria-label="Bài tiếp"></button>
+        </div>
+        <div id="chrome-row">
+          <nav id="tab-bar" class="liquid-glass lg-tab" aria-label="Điều hướng"></nav>
+          <button id="search-btn" class="liquid-glass lg-search" aria-label="Tìm kiếm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.6 4.6" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- full-screen Now Playing -->
+      <div id="now-playing" class="paused">
+        <div id="np-bg">
+          <div class="blob b1"></div>
+          <div class="blob b2"></div>
+          <div class="blob b3"></div>
+        </div>
+        <div id="np-content">
+          <div id="np-close-area">
+            <div id="np-grabber"></div>
+            <div id="np-art-wrap">
+              <img id="np-art" alt="" />
+            </div>
+          </div>
+          <div id="np-title-row">
+            <div id="np-texts">
+              <div id="np-title"></div>
+              <div id="np-artist"></div>
+            </div>
+            <button id="np-fav" aria-label="Yêu thích">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                <path d="m12 2.7 2.55 5.84 6.35.6c.5.05.7.67.32 1l-4.79 4.2 1.41 6.21a.55.55 0 0 1-.82.6L12 17.9l-5.47 3.25a.55.55 0 0 1-.82-.6l1.41-6.21-4.79-4.2a.55.55 0 0 1 .32-1l6.35-.6L11.55 2.7a.55.55 0 0 1 .9 0z" />
+              </svg>
+            </button>
+            <button id="np-more" aria-label="Tuỳ chọn">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                <circle cx="5" cy="12" r="1.9" /><circle cx="12" cy="12" r="1.9" /><circle cx="19" cy="12" r="1.9" />
+              </svg>
+            </button>
+          </div>
+          <div class="np-slider" id="np-scrub">
+            <div class="track"><div class="fill"></div></div>
+          </div>
+          <div id="np-times"><span id="np-t-el">0:00</span><span id="np-t-rem">-0:00</span></div>
+          <div id="np-transport">
+            <button class="skip" id="np-prev" aria-label="Bài trước"></button>
+            <button class="pp" id="np-pp" aria-label="Phát / Dừng"></button>
+            <button class="skip" id="np-next" aria-label="Bài tiếp"></button>
+          </div>
+          <div id="np-vol-row">
+            <span id="np-vol-lo"></span>
+            <div class="np-slider" id="np-vol">
+              <div class="track"><div class="fill"></div></div>
+            </div>
+            <span id="np-vol-hi"></span>
+          </div>
+          <div id="np-bottom">
+            <button id="np-lyrics-btn" aria-label="Lời bài hát"></button>
+            <button id="np-video-btn" aria-label="Xem video"></button>
+            <button id="np-queue-btn" aria-label="Hàng đợi"></button>
+          </div>
+        </div>
+        <div id="np-queue">
+          <div class="q-head">Tiếp theo</div>
+          <div class="q-list" id="np-queue-list"></div>
+        </div>
+      </div>
+
+      <!-- bottom sheets -->
+      <div class="sheet-backdrop" id="sheet-backdrop"></div>
+      <div class="sheet" id="sheet">
+        <div class="sheet-grab"></div>
+        <div class="sheet-title"></div>
+        <div class="sheet-body"></div>
+      </div>
+    </div>
+
+    <script src="js/util.js"></script>
+    <script src="js/icons.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/youtube.js"></script>
+    <script src="js/glass.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/library.js"></script>
+    <script src="js/views.js"></script>
+    <script src="js/nowplaying.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      /* static icon slots that exist before app.js builds dynamic UI */
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('mp-toggle').innerHTML = Icons.play;
+        document.getElementById('mp-fwd').innerHTML = Icons.fwd;
+        document.getElementById('np-pp').innerHTML = Icons.play;
+        document.getElementById('np-prev').innerHTML = Icons.rew;
+        document.getElementById('np-next').innerHTML = Icons.fwd;
+        document.getElementById('np-vol-lo').innerHTML = Icons.volLow;
+        document.getElementById('np-vol-hi').innerHTML = Icons.volHigh;
+        document.getElementById('np-lyrics-btn').innerHTML = Icons.lyrics;
+        document.getElementById('np-video-btn').innerHTML = Icons.video;
+        document.getElementById('np-queue-btn').innerHTML = Icons.queue;
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+# local tooling
+.claude/
+
+# reference material (not part of the deployed app)
+reference/
+*.jpg
+*.jpeg
