@@ -23,7 +23,11 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0;
-  height: 100%;
+  /* viewport units, NOT height:100% — a percentage height silently disables
+     viewport-fit=cover in iOS standalone, shrinking the layout viewport ~34px
+     and leaving a black gap at the bottom. 100vh is correct from cold launch. */
+  height: 100vh;
+  height: 100dvh;
   background: #000;
   overscroll-behavior: none;
 }
@@ -47,14 +51,16 @@ button {
 input, textarea { font-family: inherit; }
 
 /* ============ app frame (phone column on desktop) ============ */
-/* position:fixed + inset:0 reliably fills the real viewport, including
-   iOS standalone PWA ("Add to Home Screen") where 100dvh is unreliable. */
+/* Height is driven by a viewport unit (100vh fallback, 100dvh enhancement),
+   NOT top:0/bottom:0 on a percentage context — that keeps iOS viewport-fit=cover
+   active so the fixed shell reaches the true physical bottom (no black gap). */
 #app {
   position: fixed;
   top: 0;
-  bottom: 0;
   left: 0;
   right: 0;
+  height: 100vh;
+  height: 100dvh;
   max-width: 480px;
   margin: 0 auto; /* centers the phone column on desktop */
   /* clip (not hidden): forbids programmatic/focus scrolling of the frame */
