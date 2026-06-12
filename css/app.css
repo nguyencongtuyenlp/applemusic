@@ -23,11 +23,11 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0;
-  /* viewport units, NOT height:100% — a percentage height silently disables
-     viewport-fit=cover in iOS standalone, shrinking the layout viewport ~34px
-     and leaving a black gap at the bottom. 100vh is correct from cold launch. */
+  /* 100vh ONLY (no %, no dvh). A % height silently disables viewport-fit=cover
+     in iOS standalone (gap); 100dvh mis-reports on PWA cold launch (gap until
+     you rotate). In standalone there is no toolbar, so 100vh = the true full
+     physical screen and is correct from the very first frame. */
   height: 100vh;
-  height: 100dvh;
   background: #000;
   overscroll-behavior: none;
 }
@@ -59,8 +59,7 @@ input, textarea { font-family: inherit; }
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  height: 100dvh;
+  height: 100vh; /* 100vh only — correct from cold launch in iOS standalone */
   max-width: 480px;
   margin: 0 auto; /* centers the phone column on desktop */
   /* clip (not hidden): forbids programmatic/focus scrolling of the frame */
