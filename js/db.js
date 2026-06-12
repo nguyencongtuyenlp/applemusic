@@ -202,6 +202,16 @@
       }
     },
 
+    /* read ONLY the local cache (bypass cloud) — used for first-run migration */
+    async localSongs() {
+      const rows = await idbAll('songs');
+      rows.forEach((r) => delete r.audioBlob);
+      return rows;
+    },
+    localPlaylists() {
+      return idbAll('playlists');
+    },
+
     /* ---------- audio blobs (local only) ---------- */
     putAudio(id, blob) {
       return idbPut('audio', { id, blob });

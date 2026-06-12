@@ -47,6 +47,24 @@
     await DB.kvSet('seeded-v1', true);
   }
 
+  /* First time cloud is switched on for a previously-local install:
+     cloud is empty but the device has a local library → push it up once.
+     Only runs when the cloud read succeeded and came back empty (safe). */
+  let didMigrate = false;
+  async function migrateLocalToCloud() {
+    if (!DB.cloud) return;
+    if (Library.songs.length > 0) return; // cloud already has data
+    const local = await DB.localSongs();
+    if (!local.length) return; // nothing to migrate
+    for (const s of local) await DB.putSong(s);
+    const pls = await DB.localPlaylists();
+    for (const p of pls) await DB.putPlaylist(p);
+    await DB.kvSet('seeded-v1', true);
+    await Library.init();
+    didMigrate = true;
+    Util.toast('Đã tải thư viện sẵn có lên đám mây ☁️');
+  }
+
   /* ============ tabs ============ */
   const TABS = [
     { id: 'home', label: 'Trang chủ', icon: 'home' },
@@ -476,6 +494,7 @@
     initSearch();
 
     await Library.init();
+    await migrateLocalToCloud();
     await seedIfFirstRun();
 
     TABS.forEach((t) => {
@@ -502,7 +521,7 @@
 
     if (location.protocol === 'file:') {
       Util.toast('Hãy chạy qua máy chủ web (vd: npx serve) — mở file trực tiếp sẽ không phát được YouTube.');
-    } else if (DB.cloud) {
+    } else if (DB.cloud && !didMigrate) {
       Util.toast('☁️ Đã đồng bộ với kho lưu trữ đám mây');
     }
   }
