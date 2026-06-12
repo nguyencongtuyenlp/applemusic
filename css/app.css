@@ -733,7 +733,8 @@ input, textarea { font-family: inherit; }
   right: 0;
   bottom: 0;
   z-index: 40;
-  padding: 0 16px calc(10px + var(--safe-bottom));
+  /* max() (not additive) so we don't over-pad above the home indicator */
+  padding: 0 16px max(10px, var(--safe-bottom));
   pointer-events: none;
   transition: opacity 0.25s ease;
 }
@@ -811,7 +812,7 @@ input, textarea { font-family: inherit; }
   position: absolute;
   left: 22px;
   right: 22px;
-  bottom: calc(10px + var(--safe-bottom) + var(--chrome-h) + 8px);
+  bottom: calc(max(10px, var(--safe-bottom)) + var(--chrome-h) + 8px);
   height: 58px;
   border-radius: 29px;
   display: flex;
