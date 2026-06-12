@@ -205,7 +205,7 @@
     const head = el('div', 'page-head');
     head.innerHTML =
       '<h1 class="page-title">Trang chủ</h1><button class="avatar" aria-label="Hồ sơ">♪</button>';
-    head.querySelector('.avatar').addEventListener('click', () => App.openAddSheet());
+    head.querySelector('.avatar').addEventListener('click', () => App.openSettingsSheet());
     view.appendChild(head);
 
     /* — Lựa Chọn Hàng Đầu Cho Bạn — */
@@ -298,7 +298,7 @@
     const head = el('div', 'page-head');
     head.innerHTML =
       '<h1 class="page-title">Khám phá</h1><button class="avatar" aria-label="Hồ sơ">♪</button>';
-    head.querySelector('.avatar').addEventListener('click', () => App.openAddSheet());
+    head.querySelector('.avatar').addEventListener('click', () => App.openSettingsSheet());
     view.appendChild(head);
 
     /* hero group */
@@ -390,7 +390,7 @@
     const head = el('div', 'page-head');
     head.innerHTML =
       '<h1 class="page-title">Radio</h1><button class="avatar" aria-label="Hồ sơ">♪</button>';
-    head.querySelector('.avatar').addEventListener('click', () => App.openAddSheet());
+    head.querySelector('.avatar').addEventListener('click', () => App.openSettingsSheet());
     view.appendChild(head);
 
     const grid = el('div', 'radio-grid');
@@ -457,7 +457,7 @@
       '<button class="avatar" aria-label="Hồ sơ">♪</button></div>';
     head.querySelector('#lib-add').addEventListener('click', () => App.openAddSheet());
     head.querySelector('#lib-more').addEventListener('click', () => App.openLibrarySheet());
-    head.querySelector('.avatar').addEventListener('click', () => App.openAddSheet());
+    head.querySelector('.avatar').addEventListener('click', () => App.openSettingsSheet());
     view.appendChild(head);
 
     // "Ghim nhạc thường nghe của bạn" onboarding card (like real Apple Music),

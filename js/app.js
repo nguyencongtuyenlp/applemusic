@@ -76,6 +76,10 @@
   function buildTabBar() {
     const bar = $('tab-bar');
     bar.innerHTML = '';
+    // sliding liquid-glass selection lens (sits behind the active tab)
+    const indicator = el('div', 'tab-indicator');
+    indicator.id = 'tab-indicator';
+    bar.appendChild(indicator);
     TABS.forEach((t) => {
       const b = el('button', 'tab' + (t.id === activeTab ? ' active' : ''));
       b.dataset.tab = t.id;
@@ -89,6 +93,23 @@
       });
       bar.appendChild(b);
     });
+    requestAnimationFrame(positionTabIndicator);
+    setTimeout(positionTabIndicator, 150); // fallback if rAF fires before layout
+  }
+
+  /* slide the glass lens to sit exactly over the active tab */
+  function positionTabIndicator() {
+    const bar = $('tab-bar');
+    const ind = $('tab-indicator');
+    const active = bar && bar.querySelector('.tab.active');
+    if (!bar || !ind || !active) return;
+    const b = bar.getBoundingClientRect();
+    const a = active.getBoundingClientRect();
+    if (!a.width) return;
+    ind.style.width = a.width + 'px';
+    ind.style.height = a.height + 'px';
+    ind.style.transform = 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top) + 'px)';
+    ind.classList.add('ready'); // reveal once correctly placed
   }
 
   function switchTab(tab) {
@@ -108,6 +129,7 @@
     const view = $('view-' + tab);
     view.scrollTop = scrollPos[tab] || 0;
     App.setChromeCollapsed(false);
+    positionTabIndicator();
   }
 
   function refreshAll() {
@@ -121,9 +143,14 @@
     if (chromeCollapsed === v) return;
     chromeCollapsed = v;
     $('bottom-chrome').classList.toggle('collapsed', v);
-    /* re-fit the refraction maps once the width transition settles */
+    /* the lens follows the active tab as it grows/shrinks during collapse */
+    positionTabIndicator();
+    /* re-fit the refraction maps + lens once the width transition settles */
     clearTimeout(glassRefreshTimer);
-    glassRefreshTimer = setTimeout(() => Glass.refreshAll(), 420);
+    glassRefreshTimer = setTimeout(() => {
+      Glass.refreshAll();
+      positionTabIndicator();
+    }, 380);
   }
 
   /* ============ search ============ */
@@ -448,7 +475,58 @@
         setTimeout(() => App.createPlaylistPrompt(), 120);
       });
       body.appendChild(a2);
+      const a3 = el('button', 'as-row');
+      a3.innerHTML = Icons.album + '<span>Cài đặt giao diện</span>';
+      a3.addEventListener('click', () => {
+        close();
+        setTimeout(() => openSettingsSheet(), 120);
+      });
+      body.appendChild(a3);
     }, 'Thư viện');
+  }
+
+  /* ---- settings: Liquid Glass translucency ---- */
+  // slider 0..100 (độ trong); higher = clearer = lower fill alpha
+  function applyGlassTranslucency(val) {
+    const alpha = (0.5 - (val / 100) * 0.42).toFixed(3); // 0%→0.50, 100%→0.08
+    document.documentElement.style.setProperty('--glass-alpha', alpha);
+  }
+  function loadGlassTranslucency() {
+    const v = parseInt(localStorage.getItem('glass-translucency') || '55', 10);
+    applyGlassTranslucency(v);
+  }
+  function openSettingsSheet() {
+    openSheet((body, close) => {
+      const saved = parseInt(localStorage.getItem('glass-translucency') || '55', 10);
+      body.innerHTML =
+        '<div class="set-row"><span class="set-label">Độ trong của Liquid Glass</span><span class="set-val" id="glass-val">' + saved + '%</span></div>' +
+        '<div class="set-preview"><div class="set-glass">Liquid Glass</div></div>' +
+        '<input type="range" class="set-slider" id="glass-slider" min="0" max="100" value="' + saved + '">' +
+        '<p class="f-hint">Chỉnh độ trong suốt của thanh tab, mini player và các lớp kính. Kéo càng sang phải càng trong (nhìn xuyên thấu nhiều hơn) — đúng kiểu iOS 26.</p>' +
+        '<div class="set-divider"></div>' +
+        '<button class="as-row" id="set-add">' + Icons.plus + '<span>Thêm bài hát</span></button>' +
+        '<button class="as-row" id="set-reset">' + Icons.repeat + '<span>Khôi phục mặc định</span></button>';
+      const slider = body.querySelector('#glass-slider');
+      const valEl = body.querySelector('#glass-val');
+      slider.addEventListener('input', () => {
+        const v = +slider.value;
+        applyGlassTranslucency(v);
+        valEl.textContent = v + '%';
+        localStorage.setItem('glass-translucency', String(v));
+        Glass.refreshAll();
+      });
+      body.querySelector('#set-add').addEventListener('click', () => {
+        close();
+        setTimeout(() => openAddSheet(), 120);
+      });
+      body.querySelector('#set-reset').addEventListener('click', () => {
+        slider.value = 55;
+        applyGlassTranslucency(55);
+        valEl.textContent = '55%';
+        localStorage.setItem('glass-translucency', '55');
+        Glass.refreshAll();
+      });
+    }, 'Cài đặt');
   }
 
   async function createPlaylistPrompt() {
@@ -500,9 +578,11 @@
 
   /* ============ boot ============ */
   async function boot() {
+    loadGlassTranslucency();
     buildTabBar();
     NowPlaying.init();
     initSearch();
+    window.addEventListener('resize', positionTabIndicator);
 
     await Library.init();
     await migrateLocalToCloud();
@@ -544,6 +624,7 @@
     openSongSheet,
     openPlaylistSheet,
     openLibrarySheet,
+    openSettingsSheet,
     createPlaylistPrompt,
     deleteSong,
     refreshAll,
