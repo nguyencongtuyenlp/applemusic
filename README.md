@@ -36,6 +36,28 @@ vercel
 
 Cách 3 — GitHub: push thư mục lên repo, import vào Vercel. Không cần cấu hình gì thêm (site tĩnh thuần). `.vercelignore` đã loại ảnh chụp tham khảo và thư mục `reference/` khỏi bản deploy.
 
+## Lưu trữ đám mây (Supabase) — tuỳ chọn
+
+Mặc định app lưu dữ liệu trong **trình duyệt** (IndexedDB). Để **đồng bộ thư viện qua mọi thiết bị**, bật Supabase (miễn phí):
+
+1. Tạo project tại [supabase.com](https://supabase.com).
+2. Vào **SQL Editor → New query**, dán toàn bộ [supabase-setup.sql](supabase-setup.sql) rồi **Run** (tạo bảng + cho phép truy cập).
+3. Vào **Project Settings → API**, copy **Project URL** và **anon public key**.
+4. Dán 2 giá trị đó vào [js/config.js](js/config.js):
+   ```js
+   window.APP_CONFIG = {
+     SUPABASE_URL: 'https://xxxx.supabase.co',
+     SUPABASE_ANON_KEY: 'eyJhbGci...'
+   };
+   ```
+5. Commit & deploy lại. App sẽ hiện toast “☁️ Đã đồng bộ với kho lưu trữ đám mây”.
+
+Mô hình (theo lựa chọn *thư viện chung, chỉ metadata*):
+- **Cloud (Supabase)**: metadata bài hát (YouTube + file), playlist, yêu thích, ảnh bìa (base64), recents → đồng bộ mọi nơi.
+- **Local (IndexedDB)**: chỉ file MP3 đã tải lên. Vì vậy bài YouTube phát được trên mọi thiết bị; bài tải-từ-file chỉ phát trên đúng máy đã tải (máy khác vẫn thấy bài nhưng app sẽ báo và bỏ qua).
+- anon key là **public-by-design** (bảo vệ bằng RLS), commit lên GitHub/Vercel bình thường. Vì app không đăng nhập nên ai có link cũng sửa được thư viện — muốn khoá lại xem ghi chú cuối file SQL.
+- Chưa điền key → app vẫn chạy 100% local như cũ, không cần mạng.
+
 ## Lưu ý
 
 - **YouTube chạy nền**: trên desktop, nhạc tiếp tục phát khi chuyển tab khác. Trên điện thoại, trình duyệt sẽ dừng video YouTube khi tắt màn hình — đây là giới hạn của nền tảng web (không web app nào vượt qua được); nhạc **tải lên từ file** thì vẫn phát khi khoá màn hình.
@@ -51,7 +73,9 @@ index.html        — khung app + SVG liquid glass filters
 css/app.css       — toàn bộ style (design tokens theo iOS 26)
 js/util.js        — helpers (màu từ ảnh bìa, gradient cover, toast…)
 js/icons.js       — bộ icon SVG tự vẽ kiểu SF Symbols
-js/db.js          — IndexedDB (songs / playlists / kv)
+js/config.js      — credentials Supabase (để trống = chạy local)
+js/db.js          — lưu trữ: Supabase (cloud) + IndexedDB (audio + cache)
+supabase-setup.sql— SQL tạo bảng + RLS cho Supabase
 js/youtube.js     — tách video ID, oEmbed, IFrame API loader
 js/glass.js       — sinh displacement map cho hiệu ứng khúc xạ
 js/player.js      — engine phát hợp nhất (YouTube + file)

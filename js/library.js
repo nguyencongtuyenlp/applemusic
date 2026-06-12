@@ -30,9 +30,12 @@
       this.ready = true;
     },
 
-    /* every song gets coverDisplayUrl usable in <img src> */
+    /* every song gets coverDisplayUrl usable in <img src>.
+       priority: synced base64 cover -> legacy local blob -> remote url -> gradient */
     hydrateCover(song) {
-      if (song.coverBlob) {
+      if (song.coverData) {
+        song.coverDisplayUrl = song.coverData;
+      } else if (song.coverBlob) {
         let url = this._coverUrls.get(song.id);
         if (!url) {
           url = URL.createObjectURL(song.coverBlob);
@@ -76,7 +79,7 @@
       if (!song.title) song.title = 'Bài hát YouTube';
       if (!song.artist) song.artist = 'Không rõ nghệ sĩ';
       if (coverFile) {
-        song.coverBlob = await Util.fileToCoverBlob(coverFile);
+        song.coverData = await Util.fileToCoverDataUrl(coverFile);
       } else {
         song.coverUrl = await YTUtil.bestThumb(ytId);
       }
@@ -94,12 +97,11 @@
         title: (title || '').trim() || audioFile.name.replace(/\.[^.]+$/, ''),
         artist: (artist || '').trim() || 'Không rõ nghệ sĩ',
         album: (album || '').trim(),
-        audioBlob: audioFile,
         favorite: false,
         playCount: 0,
         addedAt: Date.now(),
       };
-      if (coverFile) song.coverBlob = await Util.fileToCoverBlob(coverFile);
+      if (coverFile) song.coverData = await Util.fileToCoverDataUrl(coverFile);
       // measure duration up front so lists can show it
       song.duration = await new Promise((resolve) => {
         const u = URL.createObjectURL(audioFile);
@@ -115,8 +117,9 @@
         };
         a.src = u;
       });
+      // raw audio stays local (IndexedDB); only metadata syncs to cloud
+      await DB.putAudio(song.id, audioFile);
       await DB.putSong(song);
-      delete song.audioBlob; // stored in IndexedDB; don't hold it in memory
       this.songs.unshift(this.hydrateCover(song));
       return song;
     },
@@ -125,17 +128,17 @@
       const song = this.byId(id);
       if (!song) return;
       Object.assign(song, patch);
-      if (patch.coverBlob) {
+      if (patch.coverData) {
         const old = this._coverUrls.get(id);
         if (old) URL.revokeObjectURL(old);
         this._coverUrls.delete(id);
         delete song.coverUrl;
+        delete song.coverBlob;
         this.hydrateCover(song);
-      } else if (patch.coverUrl && !song.coverBlob) {
+      } else if (patch.coverUrl && !song.coverData && !song.coverBlob) {
         song.coverDisplayUrl = patch.coverUrl;
       }
-      const stored = await DB.getSong(id);
-      await DB.putSong(Object.assign(stored || {}, songToStored(song)));
+      await DB.putSong(song);
       return song;
     },
 
@@ -161,11 +164,7 @@
       const song = this.byId(id);
       if (!song) return false;
       song.favorite = !song.favorite;
-      const stored = await DB.getSong(id);
-      if (stored) {
-        stored.favorite = song.favorite;
-        await DB.putSong(stored);
-      }
+      await DB.putSong(song);
       return song.favorite;
     },
 
@@ -207,12 +206,7 @@
       if (song) {
         song.playCount = (song.playCount || 0) + 1;
         song.lastPlayedAt = Date.now();
-        const stored = await DB.getSong(songId);
-        if (stored) {
-          stored.playCount = song.playCount;
-          stored.lastPlayedAt = song.lastPlayedAt;
-          await DB.putSong(stored);
-        }
+        await DB.putSong(song);
       }
     },
     recentSongs(limit) {
@@ -263,13 +257,6 @@
       );
     },
   };
-
-  // strip runtime-only fields before persisting
-  function songToStored(song) {
-    const out = Object.assign({}, song);
-    delete out.coverDisplayUrl;
-    return out;
-  }
 
   window.Library = Library;
 })();

@@ -148,5 +148,31 @@
     });
   }
 
-  window.Util = { fmtTime, el, esc, gradientFor, gradientCoverUrl, extractColors, toast, fileToCoverBlob };
+  /* ---------- file -> resized cover as base64 data URL ----------
+     used for cloud sync (covers ride inside the song row, no Storage bucket) */
+  function fileToCoverDataUrl(file, size) {
+    size = size || 600;
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const x = c.getContext('2d');
+        const s = Math.max(size / img.width, size / img.height);
+        const w = img.width * s, h = img.height * s;
+        x.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('image decode failed'));
+      };
+      img.src = url;
+    });
+  }
+
+  window.Util = { fmtTime, el, esc, gradientFor, gradientCoverUrl, extractColors, toast, fileToCoverBlob, fileToCoverDataUrl };
 })();

@@ -289,13 +289,13 @@
               artist: fields.artist.trim() || editSong.artist,
               album: fields.album.trim(),
             };
-            if (coverFile) patch.coverBlob = await Util.fileToCoverBlob(coverFile);
+            if (coverFile) patch.coverData = await Util.fileToCoverDataUrl(coverFile);
             /* a changed YouTube link is applied for real */
             if (editSong.type === 'youtube') {
               const newId = YTUtil.extractId(urlInput.value);
               if (newId && newId !== editSong.ytId) {
                 patch.ytId = newId;
-                if (!coverFile && !editSong.coverBlob) {
+                if (!coverFile && !editSong.coverData && !editSong.coverBlob) {
                   patch.coverUrl = await YTUtil.bestThumb(newId);
                 }
               }
@@ -502,6 +502,8 @@
 
     if (location.protocol === 'file:') {
       Util.toast('Hãy chạy qua máy chủ web (vd: npx serve) — mở file trực tiếp sẽ không phát được YouTube.');
+    } else if (DB.cloud) {
+      Util.toast('☁️ Đã đồng bộ với kho lưu trữ đám mây');
     }
   }
 

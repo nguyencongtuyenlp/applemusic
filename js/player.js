@@ -253,14 +253,14 @@
       else safe(() => p.cueVideoById(song.ytId));
     } else {
       const el = ensureAudio();
-      let blob = song.audioBlob;
+      const blob = await DB.getAudio(song.id);
       if (!blob) {
-        const full = await DB.getSong(song.id);
-        blob = full && full.audioBlob;
-      }
-      if (!blob) {
-        emit('error', { message: 'Không tìm thấy dữ liệu âm thanh của bài này.' });
+        // metadata synced from another device but the file lives only there
         setLoading(false);
+        emit('error', {
+          message: 'Bài này là file tải lên — chỉ phát được trên thiết bị đã tải lên.',
+        });
+        if (state.queue.length > 1) setTimeout(() => next(true), 700);
         return;
       }
       audioUrl = URL.createObjectURL(blob);
