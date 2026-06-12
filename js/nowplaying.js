@@ -17,6 +17,13 @@
     return document.getElementById(id);
   }
 
+  /* outline star normally, filled red when favorited (matches iOS) */
+  function setFav(on) {
+    const b = $('np-fav');
+    b.classList.toggle('on', on);
+    b.innerHTML = on ? Icons.star : Icons.starOutline;
+  }
+
   /* ============ init DOM wiring ============ */
   function init() {
     np = $('now-playing');
@@ -51,7 +58,7 @@
       const s = Player.current();
       if (!s) return;
       const on = await Library.toggleFavorite(s.id);
-      $('np-fav').classList.toggle('on', on);
+      setFav(on);
       Util.toast(on ? 'Đã thêm vào Bài Hát Yêu Thích' : 'Đã bỏ yêu thích');
     });
     $('np-queue-btn').addEventListener('click', () => {
@@ -60,7 +67,9 @@
       $('np-queue-btn').classList.toggle('on', q.classList.contains('open'));
       if (q.classList.contains('open')) renderQueue();
     });
-    $('np-video-btn').addEventListener('click', toggleVideo);
+    $('np-airplay-btn').addEventListener('click', () =>
+      Util.toast('AirPlay không khả dụng trên trình duyệt web.')
+    );
     $('np-lyrics-btn').addEventListener('click', () =>
       Util.toast('Lời bài hát chưa được hỗ trợ trong bản này.')
     );
@@ -120,8 +129,7 @@
     $('mp-artist').textContent = song.artist;
     $('np-art').src = song.coverDisplayUrl;
     $('np-artist').textContent = song.artist;
-    $('np-fav').classList.toggle('on', !!song.favorite);
-    $('np-video-btn').style.display = song.type === 'youtube' ? '' : 'none';
+    setFav(!!song.favorite);
     if (song.type !== 'youtube' && videoMode) toggleVideo();
 
     /* marquee */
@@ -307,11 +315,16 @@
     dock.style.bottom = 'auto';
   }
   function toggleVideo() {
+    const cur = Player.current();
     const dock = $('yt-dock');
     if (!dock) return;
+    if (!videoMode && (!cur || cur.type !== 'youtube')) {
+      Util.toast('Chỉ bài hát từ YouTube mới xem được video.');
+      return;
+    }
     videoMode = !videoMode;
-    $('np-video-btn').classList.toggle('on', videoMode);
     if (videoMode) {
+      if (!np.classList.contains('open')) open();
       positionVideo();
       dock.classList.add('as-video');
       $('np-art').style.opacity = '0';
@@ -325,5 +338,5 @@
     if (videoMode) positionVideo();
   });
 
-  window.NowPlaying = { init, open, close, updateTrackUI };
+  window.NowPlaying = { init, open, close, updateTrackUI, toggleVideo };
 })();

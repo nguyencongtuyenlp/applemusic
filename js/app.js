@@ -352,6 +352,9 @@
         { icon: 'queue', label: 'Thêm vào cuối hàng đợi', fn: () => { Player.addToQueue(song); Util.toast('Đã thêm vào hàng đợi'); } },
         { icon: song.favorite ? 'star' : 'starOutline', label: song.favorite ? 'Bỏ yêu thích' : 'Yêu thích', fn: async () => { const on = await Library.toggleFavorite(song.id); Util.toast(on ? 'Đã thêm vào Bài Hát Yêu Thích' : 'Đã bỏ yêu thích'); refreshAll(); } },
         { icon: 'playlist', label: 'Thêm vào playlist…', fn: () => openPickPlaylistSheet(song) },
+        song.type === 'youtube' && Player.current() && Player.current().id === song.id
+          ? { icon: 'video', label: 'Xem video', fn: () => NowPlaying.toggleVideo() }
+          : null,
         { icon: 'edit', label: 'Sửa thông tin', fn: () => openAddSheet(null, song) },
         { icon: 'trash', label: 'Xoá khỏi thư viện', danger: true, fn: async () => {
             await Library.removeSong(song.id);
@@ -360,7 +363,7 @@
             refreshAll();
           } },
       ];
-      actions.forEach((a) => {
+      actions.filter(Boolean).forEach((a) => {
         const b = el('button', 'as-row' + (a.danger ? ' danger' : ''));
         b.innerHTML = Icons[a.icon] + '<span>' + esc(a.label) + '</span>';
         b.addEventListener('click', () => {

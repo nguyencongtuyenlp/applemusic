@@ -47,12 +47,16 @@ button {
 input, textarea { font-family: inherit; }
 
 /* ============ app frame (phone column on desktop) ============ */
+/* position:fixed + inset:0 reliably fills the real viewport, including
+   iOS standalone PWA ("Add to Home Screen") where 100dvh is unreliable. */
 #app {
-  position: relative;
-  height: 100vh; /* fallback for browsers without dvh */
-  height: 100dvh;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   max-width: 480px;
-  margin: 0 auto;
+  margin: 0 auto; /* centers the phone column on desktop */
   /* clip (not hidden): forbids programmatic/focus scrolling of the frame */
   overflow: clip;
   background: var(--bg);
@@ -839,7 +843,7 @@ input, textarea { font-family: inherit; }
   inset: 0;
   z-index: 60;
   transform: translateY(103%);
-  transition: transform 0.5s var(--ease-ios);
+  transition: transform 0.5s var(--ease-ios), border-radius 0.4s ease;
   border-radius: 24px 24px 0 0;
   overflow: hidden;
   background: #101012;
@@ -847,7 +851,8 @@ input, textarea { font-family: inherit; }
   flex-direction: column;
   touch-action: none;
 }
-#now-playing.open { transform: translateY(0); }
+/* fully open = edge-to-edge full screen (no rounded gaps) */
+#now-playing.open { transform: translateY(0); border-radius: 0; }
 #now-playing.dragging { transition: none; }
 
 #np-bg { position: absolute; inset: 0; overflow: hidden; }
@@ -890,29 +895,39 @@ input, textarea { font-family: inherit; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc(var(--safe-top) + 10px) 28px calc(var(--safe-bottom) + 22px);
+  padding: calc(var(--safe-top) + 8px) 24px calc(var(--safe-bottom) + 16px);
   min-height: 0;
+}
+/* grabber + artwork wrapper = the drag-to-dismiss zone; it must grow so
+   the controls below get pinned to the bottom of the screen */
+#np-close-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 #np-grabber {
   width: 38px;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.32);
-  margin: 2px auto 0;
+  background: rgba(255, 255, 255, 0.3);
+  margin: 4px auto 0;
   flex: none;
 }
+/* artwork fills the upper flexible region; controls pin to the bottom */
 #np-art-wrap {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 18px 0 10px;
+  padding: 14px 0;
 }
 #np-art {
-  width: min(86%, 48dvh);
+  width: min(100%, 460px);
+  max-height: 100%;
   aspect-ratio: 1;
-  border-radius: 14px;
+  border-radius: 12px;
   object-fit: cover;
   background: #1c1c1e;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
@@ -928,11 +943,11 @@ input, textarea { font-family: inherit; }
   align-items: center;
   gap: 12px;
   flex: none;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 #np-texts { flex: 1; min-width: 0; }
 #np-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -945,7 +960,7 @@ input, textarea { font-family: inherit; }
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-#np-artist { font-size: 17px; color: rgba(255, 255, 255, 0.62); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#np-artist { font-size: 18px; color: rgba(255, 255, 255, 0.6); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #np-more {
   width: 34px;
   height: 34px;
@@ -973,6 +988,7 @@ input, textarea { font-family: inherit; }
   flex: none;
 }
 #np-fav.on { color: var(--accent); }
+#np-fav svg, #np-more svg { width: 18px; height: 18px; }
 
 /* scrubber */
 .np-slider {
@@ -1014,7 +1030,7 @@ input, textarea { font-family: inherit; }
   display: flex;
   align-items: center;
   justify-content: space-evenly;
-  margin: 14px 0 10px;
+  margin: 20px 0 14px;
   flex: none;
 }
 #np-transport button {
@@ -1037,7 +1053,7 @@ input, textarea { font-family: inherit; }
   gap: 12px;
   color: rgba(255, 255, 255, 0.55);
   flex: none;
-  margin: 4px 0 6px;
+  margin: 8px 0 6px;
 }
 #np-vol-row svg { width: 16px; height: 16px; flex: none; }
 #np-vol-row .np-slider { flex: 1; }
@@ -1048,7 +1064,7 @@ input, textarea { font-family: inherit; }
   display: flex;
   justify-content: space-evenly;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 16px;
   flex: none;
 }
 #np-bottom button {

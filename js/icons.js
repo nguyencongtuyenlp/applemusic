@@ -68,6 +68,7 @@
     queue: svg('<path d="M3.5 6.5h17"/><path d="M3.5 12h17"/><path d="M3.5 17.5h10"/>'),
     lyrics: svg('<path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3c-1.1 0-2.2-.2-3.2-.6L4 21l1.4-4.1a8 8 0 0 1-1.9-5.4A8.4 8.4 0 0 1 12 3.2a8.4 8.4 0 0 1 9 8.3z"/>'),
     video: svg('<rect x="2.5" y="5" width="14" height="14" rx="3"/><path d="m16.5 10 5-3v10l-5-3z"/>'),
+    airplay: svg('<path d="M5.5 17H4.2A2.2 2.2 0 0 1 2 14.8V6.2A2.2 2.2 0 0 1 4.2 4h15.6A2.2 2.2 0 0 1 22 6.2v8.6a2.2 2.2 0 0 1-2.2 2.2h-1.3"/><path d="M12 14.2l4.5 5.3a.6.6 0 0 1-.46 1H7.96a.6.6 0 0 1-.46-1L12 14.2z" fill="currentColor" stroke="none"/>'),
     volLow: fsvg('<path d="M4 9.5h2.8L11 5.8c.5-.45 1.3-.1 1.3.57v11.3c0 .66-.8 1.02-1.3.56L6.8 14.5H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z"/>'),
     volHigh: fsvg('<path d="M3 9.5h2.8L10 5.8c.5-.45 1.3-.1 1.3.57v11.3c0 .66-.8 1.02-1.3.56L5.8 14.5H3a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z"/><path d="M14.5 8.6a4.6 4.6 0 0 1 0 6.8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M17.2 6a8.2 8.2 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>'),
     close: svg('<path d="m6 6 12 12"/><path d="M18 6 6 18"/>'),
