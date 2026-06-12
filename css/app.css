@@ -972,7 +972,7 @@ input, textarea { font-family: inherit; }
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: calc(var(--safe-top) + 8px) 20px calc(var(--safe-bottom) + 16px);
+  padding: calc(var(--safe-top) + 8px) 12px calc(var(--safe-bottom) + 16px);
   min-height: 0;
 }
 /* grabber + artwork wrapper = the drag-to-dismiss zone; it must grow so
@@ -998,7 +998,7 @@ input, textarea { font-family: inherit; }
   align-items: center;
   justify-content: center;
   min-height: 0;
-  padding: 14px 0;
+  padding: 6px 0;
 }
 #np-art {
   width: min(100%, 480px);
@@ -1011,7 +1011,7 @@ input, textarea { font-family: inherit; }
   transition: transform 0.5s var(--ease-spring), box-shadow 0.5s ease;
 }
 #now-playing.paused #np-art {
-  transform: scale(0.82);
+  transform: scale(0.88);
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.45);
 }
 
