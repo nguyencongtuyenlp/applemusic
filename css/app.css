@@ -851,7 +851,7 @@ input, textarea { font-family: inherit; }
 }
 #tab-bar {
   height: var(--chrome-h);
-  border-radius: 32px;
+  border-radius: 28px;
   display: flex;
   align-items: stretch;
   padding: 5px;
@@ -861,7 +861,7 @@ input, textarea { font-family: inherit; }
   /* clip-path clips TRANSFORMED children (the lens) to the rounded pill —
      overflow:hidden + border-radius alone does not, so the lens used to
      poke out of the rounded ends */
-  clip-path: inset(0 round 32px);
+  clip-path: inset(0 round 28px);
   transform-origin: center bottom;
   transition: flex-grow 0.35s var(--ease-ios), max-width 0.35s var(--ease-ios),
     transform 0.34s var(--ease-spring);
@@ -962,11 +962,11 @@ input, textarea { font-family: inherit; }
 /* mini player capsule */
 #mini-player {
   position: absolute;
-  left: 22px;
-  right: 22px;
+  left: 16px;
+  right: 16px;
   bottom: calc(max(10px, var(--safe-bottom)) + var(--chrome-h) + 8px);
   height: 58px;
-  border-radius: 29px;
+  border-radius: 25px;
   display: flex;
   align-items: center;
   gap: 11px;
