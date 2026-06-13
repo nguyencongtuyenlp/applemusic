@@ -91,21 +91,27 @@
     setTimeout(positionTabIndicator, 150); // fallback if rAF fires before layout
   }
 
-  /* ---- liquid-glass lens: spring physics + velocity-driven stretch ----
-     The lens is a touch bigger than the tab (looser fit). When it moves it
-     stretches horizontally with its speed, then bounces and settles to size,
-     like a droplet of glass (iOS 26). */
-  const LENS_INFLATE = 6; // lens is this many px wider than the tab cell
-  const lens = { x: 0, vx: 0, targetX: 0, y: 0, w: 0, h: 0, raf: 0, animating: false };
+  /* ---- liquid-glass lens: spring + magnify + 2-axis jelly wobble ----
+     At rest the lens is a bit SMALLER than the tab so it fits inside the
+     rounded pill (no clipping on edge tabs). While pressed/dragged it
+     MAGNIFIES (grows beyond the bar, like a glass loupe) and chases the
+     finger; on each jump it wobbles — stretching horizontally first, then
+     vertically, then settling — like jelly (iOS 26). */
+  const LENS_W_TRIM = 10; // rest lens narrower than the tab (fits rounded ends)
+  const LENS_H_TRIM = 12; // rest lens shorter than the tab
+  const lens = {
+    cx: 0, vcx: 0, targetCx: 0, y: 0, w: 0, h: 0,
+    press: 0, pressTarget: 0, wobAmp: 0, wobT: 0,
+    lastTs: 0, raf: 0, animating: false,
+  };
 
   function lensGeom(tab) {
     const bar = $('tab-bar');
-    return {
-      x: tab.offsetLeft - bar.clientLeft - LENS_INFLATE / 2,
-      y: tab.offsetTop - bar.clientTop,
-      w: tab.offsetWidth + LENS_INFLATE,
-      h: tab.offsetHeight,
-    };
+    const w = tab.offsetWidth - LENS_W_TRIM;
+    const h = tab.offsetHeight - LENS_H_TRIM;
+    const cx = tab.offsetLeft - bar.clientLeft + tab.offsetWidth / 2;
+    const cy = tab.offsetTop - bar.clientTop + tab.offsetHeight / 2;
+    return { cx, y: cy - h / 2, w, h };
   }
   function applyLens(sx, sy) {
     const ind = $('tab-indicator');
@@ -113,7 +119,7 @@
     ind.style.width = lens.w + 'px';
     ind.style.height = lens.h + 'px';
     ind.style.transform =
-      'translate(' + lens.x + 'px,' + lens.y + 'px) scale(' + (sx || 1) + ',' + (sy || 1) + ')';
+      'translate(' + (lens.cx - lens.w / 2) + 'px,' + lens.y + 'px) scale(' + (sx || 1) + ',' + (sy || 1) + ')';
     ind.classList.add('ready');
   }
   function cancelLens() {
@@ -121,47 +127,74 @@
     lens.raf = 0;
     lens.animating = false;
   }
+  function startLens() {
+    if (!lens.animating) {
+      lens.animating = true;
+      lens.lastTs = 0;
+      lens.raf = requestAnimationFrame(lensTick);
+    }
+  }
   function setLensImmediate(tab) {
     if (!tab || !tab.offsetWidth) return;
     cancelLens();
     const g = lensGeom(tab);
-    lens.x = lens.targetX = g.x;
-    lens.vx = 0;
+    lens.cx = lens.targetCx = g.cx;
+    lens.vcx = 0;
     lens.y = g.y;
     lens.w = g.w;
     lens.h = g.h;
-    applyLens(1, 1);
+    lens.press = lens.pressTarget;
+    lens.wobAmp = 0;
+    const mag = 1 + lens.press * 0.5;
+    applyLens(mag, mag);
   }
   function springLensTo(tab) {
     if (!tab || !tab.offsetWidth) return;
     const g = lensGeom(tab);
-    lens.targetX = g.x;
+    lens.targetCx = g.cx;
     lens.y = g.y;
     lens.w = g.w;
     lens.h = g.h;
-    if (!lens.animating) {
-      lens.animating = true;
-      lens.raf = requestAnimationFrame(lensTick);
+    // kick the jelly proportional to the jump (keeps it lively while dragging)
+    const amp = Math.min(Math.abs(g.cx - lens.cx) * 0.006, 0.32);
+    if (amp > lens.wobAmp * Math.exp(-7 * lens.wobT)) {
+      lens.wobAmp = amp;
+      lens.wobT = 0;
     }
+    startLens();
   }
-  function lensTick() {
-    const k = 0.18, // stiffness
-      d = 0.7; // damping (lower = bouncier)
-    const dx = lens.targetX - lens.x;
-    lens.vx = (lens.vx + dx * k) * d;
-    lens.x += lens.vx;
-    if (Math.abs(dx) < 0.25 && Math.abs(lens.vx) < 0.25) {
-      lens.x = lens.targetX;
-      lens.vx = 0;
-      applyLens(1, 1);
-      lens.animating = false;
-      lens.raf = 0;
+  function setPress(on) {
+    lens.pressTarget = on ? 1 : 0;
+    startLens();
+  }
+  function lensTick(ts) {
+    const dt = lens.lastTs ? Math.min(48, ts - lens.lastTs) : 16;
+    lens.lastTs = ts;
+    // position spring on the centre x (so magnify scales around the icon)
+    const dx = lens.targetCx - lens.cx;
+    lens.vcx = (lens.vcx + dx * 0.18) * 0.72;
+    lens.cx += lens.vcx;
+    // magnify ramps up while pressed (glass loupe)
+    lens.press += (lens.pressTarget - lens.press) * 0.18;
+    const mag = 1 + lens.press * 0.5; // up to 1.5x
+    // jelly: decaying cosine, X and Y opposite → wide first, then tall, then rest
+    lens.wobT += dt / 1000;
+    const wob = lens.wobAmp * Math.exp(-7 * lens.wobT) * Math.cos(26 * lens.wobT);
+    applyLens(mag * (1 + wob), mag * (1 - wob * 0.82));
+    const settled =
+      Math.abs(dx) < 0.3 &&
+      Math.abs(lens.vcx) < 0.3 &&
+      Math.abs(lens.press - lens.pressTarget) < 0.01 &&
+      Math.abs(wob) < 0.004;
+    if (settled) {
+      lens.cx = lens.targetCx;
+      lens.vcx = 0;
+      lens.press = lens.pressTarget;
+      const m = 1 + lens.press * 0.5;
+      applyLens(m, m);
+      cancelLens();
       return;
     }
-    // stretch horizontally with speed; squash vertically a touch (liquid feel)
-    const stretch = 1 + Math.min(Math.abs(lens.vx) * 0.02, 0.4);
-    const squash = 1 - (stretch - 1) * 0.45;
-    applyLens(stretch, squash);
     lens.raf = requestAnimationFrame(lensTick);
   }
   function positionTabIndicator() {
@@ -196,6 +229,7 @@
       try { bar.setPointerCapture(e.pointerId); } catch (er) {}
       if (chromeCollapsed) return; // collapsed: a tap just re-expands (on release)
       bar.classList.add('pressing');
+      setPress(true); // magnify the lens
       const tgt = tabUnderX(e.clientX) || tab;
       springLensTo(tgt);
       setPreview(tgt);
@@ -213,6 +247,7 @@
       if (!press) return;
       const wasCollapsed = press.collapsed;
       bar.classList.remove('pressing');
+      setPress(false); // shrink the magnify back to rest size
       clearPreview();
       if (commit && !wasCollapsed) {
         const tgt = tabUnderX(e.clientX);
@@ -616,10 +651,31 @@
     const v = parseInt(localStorage.getItem('glass-translucency') || '55', 10);
     applyGlassTranslucency(v);
   }
+
+  /* ---- settings: theme (dark / light / auto) ---- */
+  function applyTheme(theme) {
+    const useLight =
+      theme === 'light' ||
+      (theme === 'auto' && window.matchMedia('(prefers-color-scheme: light)').matches);
+    document.documentElement.classList.toggle('light', useLight);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', useLight ? '#f2f2f7' : '#000000');
+  }
+  function loadTheme() {
+    applyTheme(localStorage.getItem('theme') || 'dark');
+  }
+
   function openSettingsSheet() {
     openSheet((body, close) => {
       const saved = parseInt(localStorage.getItem('glass-translucency') || '55', 10);
+      const theme = localStorage.getItem('theme') || 'dark';
+      const themeBtn = (val, label) =>
+        '<button class="seg-btn' + (theme === val ? ' active' : '') + '" data-theme="' + val + '">' + label + '</button>';
       body.innerHTML =
+        '<div class="f-label" style="margin-top:2px">GIAO DIỆN</div>' +
+        '<div class="seg" id="theme-seg">' +
+        themeBtn('dark', 'Tối') + themeBtn('light', 'Sáng') + themeBtn('auto', 'Tự động') +
+        '</div>' +
         '<div class="set-row"><span class="set-label">Độ trong của Liquid Glass</span><span class="set-val" id="glass-val">' + saved + '%</span></div>' +
         '<div class="set-preview"><div class="set-glass">Liquid Glass</div></div>' +
         '<input type="range" class="set-slider" id="glass-slider" min="0" max="100" value="' + saved + '">' +
@@ -627,6 +683,15 @@
         '<div class="set-divider"></div>' +
         '<button class="as-row" id="set-add">' + Icons.plus + '<span>Thêm bài hát</span></button>' +
         '<button class="as-row" id="set-reset">' + Icons.repeat + '<span>Khôi phục mặc định</span></button>';
+      body.querySelectorAll('#theme-seg .seg-btn').forEach((b) => {
+        b.addEventListener('click', () => {
+          const t = b.dataset.theme;
+          localStorage.setItem('theme', t);
+          applyTheme(t);
+          body.querySelectorAll('#theme-seg .seg-btn').forEach((x) => x.classList.toggle('active', x === b));
+          Glass.refreshAll();
+        });
+      });
       const slider = body.querySelector('#glass-slider');
       const valEl = body.querySelector('#glass-val');
       slider.addEventListener('input', () => {
@@ -699,6 +764,7 @@
 
   /* ============ boot ============ */
   async function boot() {
+    loadTheme();
     loadGlassTranslucency();
     buildTabBar();
     NowPlaying.init();
