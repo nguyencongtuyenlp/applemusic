@@ -800,6 +800,10 @@ input, textarea { font-family: inherit; }
   flex: 1;
   min-width: 64px;
   overflow: hidden;
+  /* clip-path clips TRANSFORMED children (the lens) to the rounded pill —
+     overflow:hidden + border-radius alone does not, so the lens used to
+     poke out of the rounded ends */
+  clip-path: inset(0 round 32px);
   transform-origin: center bottom;
   transition: flex-grow 0.35s var(--ease-ios), max-width 0.35s var(--ease-ios),
     transform 0.34s var(--ease-spring);

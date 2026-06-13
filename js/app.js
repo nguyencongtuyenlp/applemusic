@@ -95,7 +95,7 @@
      The lens is a touch bigger than the tab (looser fit). When it moves it
      stretches horizontally with its speed, then bounces and settles to size,
      like a droplet of glass (iOS 26). */
-  const LENS_INFLATE = 10; // lens is this many px wider than the tab cell
+  const LENS_INFLATE = 6; // lens is this many px wider than the tab cell
   const lens = { x: 0, vx: 0, targetX: 0, y: 0, w: 0, h: 0, raf: 0, animating: false };
 
   function lensGeom(tab) {
