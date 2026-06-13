@@ -57,6 +57,24 @@ html.light .liquid-glass {
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 html.light .glass-circle:active { background: rgba(210, 210, 214, 0.85); }
+/* text / surfaces that hard-code a dark-background assumption (NOT Now Playing,
+   which stays dark over the artwork) */
+html.light #view-search { background: rgba(242, 242, 247, 0.94); }
+html.light #search-field input,
+html.light #search-cancel,
+html.light #search-btn,
+html.light #mini-player .mp-btn,
+html.light .pin-icon,
+html.light .as-row,
+html.light .as-song .t,
+html.light .sheet-title,
+html.light .f-input,
+html.light .f-file.has,
+html.light .seg button { color: var(--text-1); }
+html.light .seg button.active { color: #fff; }
+html.light .row:active,
+html.light .lib-row:active { background: rgba(0, 0, 0, 0.05); }
+html.light .as-row:active { background: rgba(0, 0, 0, 0.04); }
 html.light #app { background: var(--bg); }
 @media (min-width: 520px) {
   html.light #app { box-shadow: 0 0 0 1px #dcdce0, 0 0 80px rgba(0, 0, 0, 0.08); }
