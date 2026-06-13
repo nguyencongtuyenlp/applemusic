@@ -84,32 +84,86 @@
       const b = el('button', 'tab' + (t.id === activeTab ? ' active' : ''));
       b.dataset.tab = t.id;
       b.innerHTML = Icons[t.icon] + '<span class="tab-label">' + esc(t.label) + '</span>';
-      b.addEventListener('click', () => {
-        if (chromeCollapsed && t.id === activeTab) {
-          App.setChromeCollapsed(false);
-          return;
-        }
-        switchTab(t.id);
-      });
       bar.appendChild(b);
     });
+    wireTabGesture(bar);
     requestAnimationFrame(positionTabIndicator);
     setTimeout(positionTabIndicator, 150); // fallback if rAF fires before layout
   }
 
-  /* slide the glass lens to sit exactly over the active tab */
-  function positionTabIndicator() {
+  /* place the glass lens exactly over a given tab (offsetLeft = scale-safe) */
+  function moveLensToTab(tab) {
     const bar = $('tab-bar');
     const ind = $('tab-indicator');
+    if (!bar || !ind || !tab || !tab.offsetWidth) return;
+    ind.style.width = tab.offsetWidth + 'px';
+    ind.style.height = tab.offsetHeight + 'px';
+    ind.style.transform =
+      'translate(' + (tab.offsetLeft - bar.clientLeft) + 'px,' + (tab.offsetTop - bar.clientTop) + 'px)';
+    ind.classList.add('ready');
+  }
+  function positionTabIndicator() {
+    const bar = $('tab-bar');
     const active = bar && bar.querySelector('.tab.active');
-    if (!bar || !ind || !active) return;
-    const b = bar.getBoundingClientRect();
-    const a = active.getBoundingClientRect();
-    if (!a.width) return;
-    ind.style.width = a.width + 'px';
-    ind.style.height = a.height + 'px';
-    ind.style.transform = 'translate(' + (a.left - b.left) + 'px,' + (a.top - b.top) + 'px)';
-    ind.classList.add('ready'); // reveal once correctly placed
+    if (active) moveLensToTab(active);
+  }
+  function tabUnderX(x) {
+    const tabs = [].slice.call($('tab-bar').querySelectorAll('.tab'));
+    if (!tabs.length) return null;
+    for (const t of tabs) {
+      const r = t.getBoundingClientRect();
+      if (x >= r.left && x <= r.right) return t;
+    }
+    return x < tabs[0].getBoundingClientRect().left ? tabs[0] : tabs[tabs.length - 1];
+  }
+  function setPreview(tab) {
+    $('tab-bar').querySelectorAll('.tab').forEach((t) => t.classList.toggle('preview', t === tab));
+  }
+  function clearPreview() {
+    $('tab-bar').querySelectorAll('.tab.preview').forEach((t) => t.classList.remove('preview'));
+  }
+
+  /* iOS-26 press-drag-release: bar lifts/grows on touch, the glass lens
+     tracks the finger, snaps to the tab under it, and settles on release */
+  function wireTabGesture(bar) {
+    let press = null;
+    bar.addEventListener('pointerdown', (e) => {
+      const tab = e.target.closest('.tab');
+      if (!tab) return;
+      press = { id: e.pointerId, startX: e.clientX, moved: false, collapsed: chromeCollapsed };
+      try { bar.setPointerCapture(e.pointerId); } catch (er) {}
+      if (chromeCollapsed) return; // collapsed: a tap just re-expands (on release)
+      bar.classList.add('pressing');
+      const tgt = tabUnderX(e.clientX) || tab;
+      moveLensToTab(tgt);
+      setPreview(tgt);
+    });
+    bar.addEventListener('pointermove', (e) => {
+      if (!press || press.collapsed) return;
+      if (Math.abs(e.clientX - press.startX) > 4) press.moved = true;
+      const tgt = tabUnderX(e.clientX);
+      if (tgt) {
+        moveLensToTab(tgt);
+        setPreview(tgt);
+      }
+    });
+    const finish = (e, commit) => {
+      if (!press) return;
+      const wasCollapsed = press.collapsed;
+      bar.classList.remove('pressing');
+      clearPreview();
+      if (commit) {
+        if (wasCollapsed) App.setChromeCollapsed(false);
+        else {
+          const tgt = tabUnderX(e.clientX);
+          if (tgt) switchTab(tgt.dataset.tab);
+        }
+      }
+      positionTabIndicator(); // settle the lens on the (new) active tab
+      press = null;
+    };
+    bar.addEventListener('pointerup', (e) => finish(e, true));
+    bar.addEventListener('pointercancel', (e) => finish(e, false));
   }
 
   function switchTab(tab) {

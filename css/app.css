@@ -800,8 +800,23 @@ input, textarea { font-family: inherit; }
   flex: 1;
   min-width: 64px;
   overflow: hidden;
-  transition: flex-grow 0.35s var(--ease-ios), max-width 0.35s var(--ease-ios);
+  transform-origin: center bottom;
+  transition: flex-grow 0.35s var(--ease-ios), max-width 0.35s var(--ease-ios),
+    transform 0.34s var(--ease-spring);
   max-width: 100%;
+}
+/* press-drag: the whole bar lifts/grows a touch (iOS 26) */
+#bottom-chrome:not(.collapsed) #tab-bar.pressing {
+  transform: scale(1.055);
+}
+#tab-bar.pressing .tab-indicator {
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -2px 10px rgba(255, 255, 255, 0.16),
+    0 4px 14px rgba(0, 0, 0, 0.22);
+  /* track the finger snappily while dragging */
+  transition: transform 0.2s ease, width 0.2s ease, height 0.2s ease, background 0.2s ease;
 }
 /* sliding liquid-glass selection lens that moves between tabs (iOS 26) */
 .tab-indicator {
@@ -824,6 +839,8 @@ input, textarea { font-family: inherit; }
     width 0.45s var(--ease-spring),
     height 0.3s var(--ease-ios),
     border-radius 0.3s var(--ease-ios),
+    background 0.2s ease,
+    box-shadow 0.2s ease,
     opacity 0.25s ease;
 }
 .tab-indicator.ready { opacity: 1; }
@@ -853,6 +870,9 @@ input, textarea { font-family: inherit; }
 .tab svg { width: 24px; height: 24px; flex: none; }
 .tab .tab-label { font-size: 10px; font-weight: 500; white-space: nowrap; }
 .tab.active { color: var(--accent); }
+/* while dragging, only the tab under the lens (preview) lights up */
+.tab.preview { color: var(--accent); }
+#tab-bar.pressing .tab.active:not(.preview) { color: rgba(235, 235, 240, 0.72); }
 /* collapsed chrome: only active tab survives as a circle */
 #bottom-chrome.collapsed #tab-bar { flex-grow: 0.0001; max-width: 64px; }
 #bottom-chrome.collapsed .tab:not(.active) { flex-grow: 0.0001; opacity: 0; pointer-events: none; }
