@@ -97,8 +97,8 @@
      MAGNIFIES (grows beyond the bar, like a glass loupe) and chases the
      finger; on each jump it wobbles — stretching horizontally first, then
      vertically, then settling — like jelly (iOS 26). */
-  const LENS_W_TRIM = 10; // rest lens narrower than the tab (fits rounded ends)
-  const LENS_H_TRIM = 12; // rest lens shorter than the tab
+  const LENS_W_TRIM = 6; // rest lens slightly narrower than the tab (clears the rounded ends)
+  const LENS_H_TRIM = 4; // nearly full tab height (top/bottom are straight, so no clipping)
   const lens = {
     cx: 0, vcx: 0, targetCx: 0, y: 0, w: 0, h: 0,
     press: 0, pressTarget: 0, wobAmp: 0, wobT: 0,
