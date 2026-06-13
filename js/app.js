@@ -91,21 +91,83 @@
     setTimeout(positionTabIndicator, 150); // fallback if rAF fires before layout
   }
 
-  /* place the glass lens exactly over a given tab (offsetLeft = scale-safe) */
-  function moveLensToTab(tab) {
+  /* ---- liquid-glass lens: spring physics + velocity-driven stretch ----
+     The lens is a touch bigger than the tab (looser fit). When it moves it
+     stretches horizontally with its speed, then bounces and settles to size,
+     like a droplet of glass (iOS 26). */
+  const LENS_INFLATE = 10; // lens is this many px wider than the tab cell
+  const lens = { x: 0, vx: 0, targetX: 0, y: 0, w: 0, h: 0, raf: 0, animating: false };
+
+  function lensGeom(tab) {
     const bar = $('tab-bar');
+    return {
+      x: tab.offsetLeft - bar.clientLeft - LENS_INFLATE / 2,
+      y: tab.offsetTop - bar.clientTop,
+      w: tab.offsetWidth + LENS_INFLATE,
+      h: tab.offsetHeight,
+    };
+  }
+  function applyLens(sx, sy) {
     const ind = $('tab-indicator');
-    if (!bar || !ind || !tab || !tab.offsetWidth) return;
-    ind.style.width = tab.offsetWidth + 'px';
-    ind.style.height = tab.offsetHeight + 'px';
+    if (!ind) return;
+    ind.style.width = lens.w + 'px';
+    ind.style.height = lens.h + 'px';
     ind.style.transform =
-      'translate(' + (tab.offsetLeft - bar.clientLeft) + 'px,' + (tab.offsetTop - bar.clientTop) + 'px)';
+      'translate(' + lens.x + 'px,' + lens.y + 'px) scale(' + (sx || 1) + ',' + (sy || 1) + ')';
     ind.classList.add('ready');
+  }
+  function cancelLens() {
+    if (lens.raf) cancelAnimationFrame(lens.raf);
+    lens.raf = 0;
+    lens.animating = false;
+  }
+  function setLensImmediate(tab) {
+    if (!tab || !tab.offsetWidth) return;
+    cancelLens();
+    const g = lensGeom(tab);
+    lens.x = lens.targetX = g.x;
+    lens.vx = 0;
+    lens.y = g.y;
+    lens.w = g.w;
+    lens.h = g.h;
+    applyLens(1, 1);
+  }
+  function springLensTo(tab) {
+    if (!tab || !tab.offsetWidth) return;
+    const g = lensGeom(tab);
+    lens.targetX = g.x;
+    lens.y = g.y;
+    lens.w = g.w;
+    lens.h = g.h;
+    if (!lens.animating) {
+      lens.animating = true;
+      lens.raf = requestAnimationFrame(lensTick);
+    }
+  }
+  function lensTick() {
+    const k = 0.18, // stiffness
+      d = 0.7; // damping (lower = bouncier)
+    const dx = lens.targetX - lens.x;
+    lens.vx = (lens.vx + dx * k) * d;
+    lens.x += lens.vx;
+    if (Math.abs(dx) < 0.25 && Math.abs(lens.vx) < 0.25) {
+      lens.x = lens.targetX;
+      lens.vx = 0;
+      applyLens(1, 1);
+      lens.animating = false;
+      lens.raf = 0;
+      return;
+    }
+    // stretch horizontally with speed; squash vertically a touch (liquid feel)
+    const stretch = 1 + Math.min(Math.abs(lens.vx) * 0.02, 0.4);
+    const squash = 1 - (stretch - 1) * 0.45;
+    applyLens(stretch, squash);
+    lens.raf = requestAnimationFrame(lensTick);
   }
   function positionTabIndicator() {
     const bar = $('tab-bar');
     const active = bar && bar.querySelector('.tab.active');
-    if (active) moveLensToTab(active);
+    if (active) setLensImmediate(active);
   }
   function tabUnderX(x) {
     const tabs = [].slice.call($('tab-bar').querySelectorAll('.tab'));
@@ -135,7 +197,7 @@
       if (chromeCollapsed) return; // collapsed: a tap just re-expands (on release)
       bar.classList.add('pressing');
       const tgt = tabUnderX(e.clientX) || tab;
-      moveLensToTab(tgt);
+      springLensTo(tgt);
       setPreview(tgt);
     });
     bar.addEventListener('pointermove', (e) => {
@@ -143,7 +205,7 @@
       if (Math.abs(e.clientX - press.startX) > 4) press.moved = true;
       const tgt = tabUnderX(e.clientX);
       if (tgt) {
-        moveLensToTab(tgt);
+        springLensTo(tgt); // the lens chases the finger with stretch + bounce
         setPreview(tgt);
       }
     });
@@ -152,14 +214,17 @@
       const wasCollapsed = press.collapsed;
       bar.classList.remove('pressing');
       clearPreview();
-      if (commit) {
-        if (wasCollapsed) App.setChromeCollapsed(false);
-        else {
-          const tgt = tabUnderX(e.clientX);
-          if (tgt) switchTab(tgt.dataset.tab);
+      if (commit && !wasCollapsed) {
+        const tgt = tabUnderX(e.clientX);
+        if (tgt) {
+          springLensTo(tgt); // settle on the released tab with a bounce
+          switchTab(tgt.dataset.tab);
         }
+      } else if (commit && wasCollapsed) {
+        App.setChromeCollapsed(false);
+      } else {
+        springLensTo(bar.querySelector('.tab.active')); // cancelled → spring back
       }
-      positionTabIndicator(); // settle the lens on the (new) active tab
       press = null;
     };
     bar.addEventListener('pointerup', (e) => finish(e, true));
@@ -183,7 +248,9 @@
     const view = $('view-' + tab);
     view.scrollTop = scrollPos[tab] || 0;
     App.setChromeCollapsed(false);
-    positionTabIndicator();
+    // lens is driven by the gesture spring; only snap here for non-gesture
+    // (e.g. programmatic) switches when nothing is animating
+    if (!lens.animating) springLensTo($('tab-bar').querySelector('.tab.active'));
   }
 
   function refreshAll() {
